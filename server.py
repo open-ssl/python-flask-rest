@@ -1,3 +1,4 @@
+import json
 from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
 from sqlalchemy import create_engine
@@ -10,12 +11,54 @@ api = Api(app)
 
 
 class Employees(Resource):
+    post_fields = [
+        "Address", "BirthDate",
+        "City", "Country",
+        "Email",
+        "Fax", "FirstName",
+        "HireDate", "LastName",
+        "Phone", "PostalCode",
+        "ReportsTo", "State", "Title"
+    ]
+
     def get(self):
         print('stas')
         conn = db_connect.connect()
         # This line performs query and returns json result
         query = conn.execute("select * from employees")
         return {'employees': [i[0] for i in query.cursor.fetchall()]}
+
+    def post(self):
+        """
+        Method for create user in database
+        """
+        data_obj = json.loads(request.data)
+        conn = db_connect.connect()
+
+        post_query = """insert into employees"""
+        data_obj_keys = ', '.join(data_obj.keys())
+        data_obj_values = ', '.join(map(lambda x: f"'{str(x)}'", data_obj.values()))
+        import pdb
+        pdb.set_trace()
+
+        post_query + f' ({data_obj_keys})' + f' values ({data_obj_values})'
+
+
+
+        # for field_name in self.post_fields:
+        #     post_query += f"{field_name}='{data_obj.get(field_name)}'"
+        #
+        #     if field_name == 'Title':
+        #         post_query += ';'
+        #     else:
+        #         post_query += ', '
+
+        # query = conn.execute(post_query)
+        # sql_query = query.cursor.fetchall()
+        first_name = data_obj.get('FirstName')
+        last_name = data_obj.get('LastName')
+        return jsonify({'data': f'User {first_name} {last_name} was created'})
+
 
 
 class Tracks(Resource):
@@ -38,7 +81,8 @@ class Employees_Name(Resource):
         Method that removed user from database by id
         :param: employee_id (int)
         """
-        pass
+        print('It was called "delete" method!')
+        return jsonify({'data': 'delete was called with employee_id={}'.format(employee_id)})
 
 
 # add URI paths for our API
