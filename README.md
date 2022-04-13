@@ -6,6 +6,16 @@ Commands for install:
 - pip install flask flask-jsonpify flask-sqlalchemy flask-restful
 - pip freeze
 
+Activate step by step:
+
+1. DB activate
+- sqlite3 chinbook.db
+2. Activate venv (another tab)
+- cd venv
+- source bin/activate
+3. Server activate
+- python3 server.py
+4. Call API
 
 How to call API?
 
@@ -36,7 +46,7 @@ curl -X DELETE http://127.0.0.1:5002/employees/2 -H "Accept: application/json"
 
 # Post request
 
-url -X POST http://127.0.0.1:5002/employees -H "Content-Type: application/json" -d '{
+curl -X POST http://127.0.0.1:5002/employees -H "Content-Type: application/json" -d '{
   "Address": "825 8 Ave SW",
   "BirthDate": "1958-12-08 00:00:00",
   "City": "City",

@@ -1,11 +1,17 @@
 import json
+import sqlite3
 from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
 from sqlalchemy import create_engine
 from json import dumps
 from flask_jsonpify import jsonify
 
-db_connect = create_engine('sqlite:///chinook.db')
+# db_connect = create_engine('sqlite:///chinook.db')
+
+def get_connection():
+    return sqlite3.connect("chinook.db")
+
+
 app = Flask(__name__)
 api = Api(app)
 
@@ -22,39 +28,31 @@ class Employees(Resource):
     ]
 
     def get(self):
-        print('stas')
         conn = db_connect.connect()
         # This line performs query and returns json result
         query = conn.execute("select * from employees")
+        conn.close()
         return {'employees': [i[0] for i in query.cursor.fetchall()]}
 
     def post(self):
         """
-        Method for create user in database
+        Method for create new user in database
         """
         data_obj = json.loads(request.data)
-        conn = db_connect.connect()
+        conn = get_connection()
 
-        post_query = """insert into employees"""
+        post_template = """insert into employees """
         data_obj_keys = ', '.join(data_obj.keys())
-        data_obj_values = ', '.join(map(lambda x: f"'{str(x)}'", data_obj.values()))
-        import pdb
-        pdb.set_trace()
+        data_obj_values = ', '.join(map(lambda x: "\'{}\'".format(str(x)), data_obj.values()))
+        post_query = post_template + f'({data_obj_keys})' + f' values ({data_obj_values})' + ' returning FirstName'
 
-        post_query + f' ({data_obj_keys})' + f' values ({data_obj_values})'
+        try:
+            cursor = conn.cursor()
+            query = cursor.execute(post_query)
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'data': f'User {first_name} {last_name} already in DB'})
 
-
-
-        # for field_name in self.post_fields:
-        #     post_query += f"{field_name}='{data_obj.get(field_name)}'"
-        #
-        #     if field_name == 'Title':
-        #         post_query += ';'
-        #     else:
-        #         post_query += ', '
-
-        # query = conn.execute(post_query)
-        # sql_query = query.cursor.fetchall()
         first_name = data_obj.get('FirstName')
         last_name = data_obj.get('LastName')
         return jsonify({'data': f'User {first_name} {last_name} was created'})
@@ -63,7 +61,7 @@ class Employees(Resource):
 
 class Tracks(Resource):
     def get(self):
-        conn = db_connect.connect()
+        conn = get_connection()
         query = conn.execute("select trackid, name, composer, unitprice from tracks;")
         result = {'data': [dict(zip(tuple(query.keys()) ,i)) for i in query.cursor]}
         return jsonify(result)
@@ -71,9 +69,22 @@ class Tracks(Resource):
 
 class Employees_Name(Resource):
     def get(self, employee_id):
-        conn = db_connect.connect()
-        query = conn.execute("select * from employees where EmployeeId =%d "  %int(employee_id))
-        result = {'data': [dict(zip(tuple (query.keys()) ,i)) for i in query.cursor]}
+        """
+        Method that Get user from database by id
+        :param: employee_id (int)
+        """
+        conn = get_connection()
+
+        try:
+            cursor = conn.cursor()
+            query = conn.execute("select * from employees where EmployeeId =%d "  %int(employee_id))
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'data' : 'Server error occured'})
+
+        description = [item[0] for item in query.description]
+        employee_info = query.fetchall()
+        result = {'data': [dict(zip(description, *employee_info))]}
         return jsonify(result)
 
     def delete(self, employee_id):
@@ -81,7 +92,11 @@ class Employees_Name(Resource):
         Method that removed user from database by id
         :param: employee_id (int)
         """
-        print('It was called "delete" method!')
+        if False:
+            conn = db_connect.connect()
+            query = conn.execute("delete from employees where EmployeeId =%d "  %int(employee_id))
+            conn.close()
+            result = {'data': [dict(zip(tuple (query.keys()) ,i)) for i in query.cursor]}
         return jsonify({'data': 'delete was called with employee_id={}'.format(employee_id)})
 
 
